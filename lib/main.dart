@@ -1,115 +1,106 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
-void main() => runApp(MyApp());
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Text Rewriter',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: TextRewriter(),
-    );
-  }
+void main() {
+  runApp(MyApp());
 }
 
-class TextRewriter extends StatefulWidget {
+class MyApp extends StatefulWidget {
   @override
-  _TextRewriterState createState() => _TextRewriterState();
+  _MyAppState createState() => _MyAppState();
 }
 
-class _TextRewriterState extends State<TextRewriter> {
-  TextEditingController _textController = TextEditingController();
-  String _rewrittenText = '';
+class _MyAppState extends State<MyApp> {
+  final _formKey = GlobalKey<FormState>(); // For form validation
+  String _prompt = ""; // To store user prompt
+  String _generatedText = ""; // To store generated text
+  bool _isLoading = false; // Flag for loading indicator
 
-  Future<void> _rewriteText(String text) async {
-    String apiKey =
-        'gAAAAABmID7J93Bj4tROiUTFeSsht3B5mtk-sg6o0K7tJiADAvEjpdFcHrDVnuRBvizHsdu2aQa-n0J7E5oCR62BQZ2zUapqJG9ScEx7x5L0NVQn6lUdlTKa3srGtnJp0_2KEfNNQhim';
-    String endpoint = 'https://api.textcortex.com/v1/texts/rewritings';
-    Map<String, String> headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $apiKey',
-    };
-    String model = 'chat-sophos-1';
-    double temperature = 0.65;
-    int maxTokens = 2048;
-    String data = json.encode({
-      'text': text,
-      'model': model,
-      'temperature': temperature,
-      'max_tokens': maxTokens,
-      'formality': 'default',
-      'mode': 'voice_passive',
-    });
+  // Replace with your actual API key
+  final String _apiKey = "AIzaSyDoJ9XXLMOFVlH0DC82t50sMKUDZhgHUeQ";
 
-    try {
-      var response =
-          await http.post(Uri.parse(endpoint), headers: headers, body: data);
-          print("fuck you" + data);
-      if (response.statusCode == 200) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-        if (responseBody['status'] == 'success') {
-          List<dynamic> outputs = responseBody['data']['outputs'];
-          if (outputs.isNotEmpty) {
-            setState(() {
-              _rewrittenText = outputs[0]['text'].toString();
-            });
-            return;
-          }
-        }
-        print('Failed to rewrite text: No outputs found');
-      } else {
-        print('Failed to rewrite text: ${response.statusCode}');
-        print('Response body: ${response.body}');
-      }
-    } catch (error) {
-      print('Error: $error');
+  // Function to call the API and generate text
+  Future<void> _generateText() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      setState(() {
+        _isLoading = true;
+      });
+
+      final model = GenerativeModel(model: 'gemini-pro', apiKey: _apiKey);
+      final content = [Content.text(_prompt)];
+
+      final response = await model.generateContent(content);
+      print(response.text);
+      setState(() {
+        _isLoading = false;
+
+        _generatedText = response.text!;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Text Rewriter'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _textController,
-              decoration: InputDecoration(labelText: 'Enter Text'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                await _rewriteText(_textController.text);
-              },
-              child: Text('Rewrite Text'),
-            ),
-            SizedBox(height: 20),
-            Text(
-              _rewrittenText,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Text Overlay App'),
+        ),
+        body: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              // Form for user input
+              Form(
+                key: _formKey,
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Enter your prompt:',
+                  ),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter a prompt';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _prompt = value!,
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: 10.0),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _generateText,
+                child: Text('Generate Text'),
+              ),
+              SizedBox(height: 10.0),
+
+              // Display generated text and image overlay (conditionally)
+              _isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : Stack(
+                      children: [
+                        // Local image (adjust path as needed)
+                        Image.asset('assets/white.jpg'),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Center(
+                              child: Text(
+                                _generatedText,
+                                style: TextStyle(
+                                  fontSize: 20.0,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    super.dispose();
   }
 }
