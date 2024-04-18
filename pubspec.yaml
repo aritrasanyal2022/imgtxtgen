@@ -42,6 +42,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   http: ^1.0.0
+  page_transition: ^2.0.5
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -63,6 +64,8 @@ flutter:
     - assets/white.jpg
     - assets/gradient.jpg
     - assets/pic.jpg
+    - assets/pic2.jpg
+    - assets/landscape.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:
